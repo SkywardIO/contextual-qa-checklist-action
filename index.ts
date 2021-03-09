@@ -5,9 +5,7 @@ const minimatch = require("minimatch");
 const { readFileSync } = require("fs");
 
 const header =
-  "Great PR! Please pay attention to the following items before merging:";
-const footer =
-  "This is an automatically generated QA checklist based on modified files";
+  "Here are some automated tasks related to the code in this PR:";
 
 function getChecklistPaths(): Record<string, string[]> {
   const inputFile = core.getInput("input-file");
@@ -48,19 +46,18 @@ async function run() {
       repo: issue.repo,
       issue_number: issue.number
     })
-  ).data.find(comment => comment.body.includes(footer));
+  ).data.find(comment => comment.body.includes(header));
 
   if (applicableChecklistPaths.length > 0) {
     const body = [
       `${header}\n\n`,
       ...applicableChecklistPaths.map(([path, items]) => {
         return [
-          `__Files matching \`${path}\`:__\n`,
+          `For files matching \`${path}\`:\n`,
           ...items.map(item => `- [ ] ${item}\n`),
           "\n"
         ].join("");
-      }),
-      `\n${footer}`
+      })
     ].join("");
 
     if (existingComment) {
