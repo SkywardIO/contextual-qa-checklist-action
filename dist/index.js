@@ -14186,12 +14186,42 @@ const core = __webpack_require__(470);
 const github = __webpack_require__(469);
 const YAML = __webpack_require__(521);
 const minimatch = __webpack_require__(93);
-const { readFileSync } = __webpack_require__(747);
+const { join } = __webpack_require__(622);
+const { existsSync, readdirSync, readFileSync } = __webpack_require__(747);
 const header = "Here are some automated tasks related to the code in this PR:";
+function getChecklistPathsFiles() {
+    const allFiles = [];
+    let checklistFilesPath = "./.github/checklists/";
+    if (existsSync(checklistFilesPath)) {
+        const filesInFolder = readdirSync(checklistFilesPath, { withFileTypes: true })
+            .filter((value) => value.isFile())
+            .map((value) => value.name)
+            .filter((name) => name.endsWith(".yml") || name.endsWith(".yaml"))
+            .map((name) => join(checklistFilesPath, name));
+        allFiles.push(...filesInFolder);
+    }
+    if (existsSync("CHECKLIST.yml")) {
+        allFiles.push("CHECKLIST.yml");
+    }
+    if (existsSync("CHECKLIST.yaml")) {
+        allFiles.push("CHECKLIST.yaml");
+    }
+    return allFiles;
+}
 function getChecklistPaths() {
-    const inputFile = core.getInput("input-file");
-    const parsedFile = YAML.parse(readFileSync(inputFile, { encoding: "utf8" }));
-    return parsedFile.paths;
+    const allFiles = getChecklistPathsFiles();
+    return allFiles.map((file) => YAML.parse(readFileSync(file, { encoding: "utf8" })))
+        .filter((content) => !!content)
+        .map((content) => content.paths)
+        .reduce((accumulator, currentValue) => {
+        Object.keys(currentValue).forEach(key => {
+            if (key in accumulator) {
+                return accumulator[key] = [...accumulator[key], ...currentValue[key]];
+            }
+            return accumulator[key] = currentValue[key];
+        });
+        return accumulator;
+    });
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
